@@ -45,17 +45,21 @@ type typeResolverFn = (object: any) => ?GraphQLObjectType |
  */
 export function nodeDefinitions(
   idFetcher: ((id: string, context: any, info: GraphQLResolveInfo) => any),
-  typeResolver?: ?typeResolverFn
+  typeResolver?: ?typeResolverFn,
+  primaryKeyName: ?string
 ): GraphQLNodeDefinitions {
+  var id = primaryKeyName || 'id';
+
+  var fields = {};
+  fields[id] = {
+    type: new GraphQLNonNull(GraphQLID),
+    description: 'The ID of the object.',
+  };
+
   var nodeInterface = new GraphQLInterfaceType({
     name: 'Node',
     description: 'An object with an ID',
-    fields: () => ({
-      id: {
-        type: new GraphQLNonNull(GraphQLID),
-        description: 'The id of the object.',
-      },
-    }),
+    fields: () => fields,
     resolveType: typeResolver
   });
 
@@ -63,13 +67,8 @@ export function nodeDefinitions(
     name: 'node',
     description: 'Fetches an object given its ID',
     type: nodeInterface,
-    args: {
-      id: {
-        type: new GraphQLNonNull(GraphQLID),
-        description: 'The ID of an object'
-      }
-    },
-    resolve: (obj, {id}, context, info) => idFetcher(id, context, info),
+    args: fields,
+    resolve: (obj, args, context, info) => idFetcher(args[id], context, info),
   };
 
   return {nodeInterface, nodeField};
